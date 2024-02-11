@@ -148,7 +148,7 @@ type Mutation {
 }
 ```
 
-# enum
+## enum
 
 it is similar to a scalar type, but the schema defines its legal values. Enums are most valuable when the user needs to pick from a prescribed list of options.
 
@@ -161,6 +161,80 @@ enum AllowedColor {
 ```
 Enums are most useful in situations where the user must `pick from a prescribed list of options`. As an additional benefit, enum values autocomplete in tools like the Apollo Studio Explorer.
 An enum can appear anywhere a scalar is valid (including as a field argument), because they serialize as strings.
+
+## Interfaces
+
+An Interface is an abstract type that includes a certain set of fields that a type must include to implement the interface.
+
+for example here `Character` is an interface
+
+```graphql
+interface Character {
+  id: ID!
+  name: String!
+  friends: [Character]
+  appearsIn: [Episode]!
+}
+```
+
+This means that any `type` that `implements` `Character` needs to have these `exact fields`, with these `arguments and return types`.
+
+for example :: `Human` and `Droid` implements `Character` interface.
+
+```graphql
+type Human implements Character {
+  id: ID!
+  name: String!
+  friends: [Character]
+  appearsIn: [Episode]!
+  starships: [Starship]
+  totalCredits: Int
+}
+type Droid implements Character {
+  id: ID!
+  name: String!
+  friends: [Character]
+  appearsIn: [Episode]!
+  primaryFunction: String
+}
+```
+
+`Interfaces are useful when you want to return an object or set of objects, but those might be of several different types.`
+
+
+## Union 
+
+Union types share similarities with interfaces; however, they lack the ability to define any shared fields among the constituent types.
+
+```graphql
+union SearchResult = Human | Droid | Starship
+```
+
+Wherever we return a `SearchResult` type in our schema, we might get a `Human`, a `Droid`, or a `Starship`. Note that members of a union type need to be concrete object types; you can't create a union type out of interfaces or other unions.
+
+In this case, if you query a field that returns the `SearchResult` union type, you need to use an `inline fragment` to be able to query any fields at all:
+
+```graphql
+{
+  search(text: "an") {
+    __typename
+    ... on Human {
+      name
+      height
+    }
+    ... on Droid {
+      name
+      primaryFunction
+    }
+    ... on Starship {
+      name
+      length
+    }
+  }
+}
+```
+
+The `__typename` field resolves to a String which lets you differentiate different data types from each other on the client.
 
 ## About List
 
