@@ -169,8 +169,8 @@ like so:
 
 ```graphql
 type Author {
-  name: String
-  books: [Book] # A list of Books
+  books: [String]! #This means that the list itself cannot be null, but it can contain null values.
+  co_author:[String!] #This means that the list itself can be null, but it can't have any null members.
 }
 ```
 
