@@ -20,6 +20,228 @@ OR we can say `A schema defines a collection of types and the relationships betw
 
 for example :: `schema.graphqls` file is a schema
 
+`Arguments` In a system like REST, you can only pass a single set of arguments - the query parameters and URL segments in your request. But in GraphQL, every field and nested object can get its own set of arguments, making GraphQL a complete replacement for making multiple API fetches. You can even pass arguments into scalar fields, to implement data transformations once on the server, instead of on every client separately.
+
+```graphql
+{
+  human(id: "1000") {
+    name
+    height(unit: FOOT)
+  }
+}
+```
+
+Arguments can be of many different types. In the above example, we have used an Enumeration type, which represents one of a finite set of options (in this case, units of length, either METER or FOOT). GraphQL comes with a default set of types, but a GraphQL server can also declare its own custom types, as long as they can be serialized into your transport format
+
+
+`Aliases` it allow us to rename the data that is returned in a query’s results. Aliases don’t change the original schema, instead, they manipulate the structure of the query result that is fetched from your database, displaying it according to your specifications.
+
+```graphql
+{
+  empireHero: hero(episode: EMPIRE) {
+    name
+  }
+  jediHero: hero(episode: JEDI) {
+    name
+  }
+}
+```
+In the above example, the two `hero` fields would have aliasesed as `empireHero` and `jediHero`.
+
+`Fragments`  A GraphQL fragment is a piece of logic that can be shared between multiple queries and mutations.
+
+Here's the declaration of a `NameParts` fragment that can be used with any `Person` object:
+
+```graphql
+fragment NameParts on Person {
+  firstName
+  lastName
+}
+```
+Every fragment includes a subset of the fields that belong to its associated type. In the above example, the `Person` type must declare `firstName` and `lastName` fields for the `NameParts` fragment to be valid.
+
+We can now include the `NameParts` fragment in any number of queries and mutations that refer to `Person` objects, like so
+
+// Querying
+
+```graphql
+query GetPerson {
+  people(id: "7") {
+    ...NameParts
+    avatar(size: LARGE)
+  }
+}
+```
+You precede an included fragment with three periods (`...`) much like JavaScript `spread syntax`.
+
+The `spread (...) syntax` allows an iterable, such as an array or string, to be expanded in places where zero or more arguments (for function calls) or elements (for array literals) are expected. In an object literal, the spread syntax enumerates the properties of an object and adds the key-value pairs to the object being created.
+
+for example : 
+
+```javascript
+const numbers = [1, 2, 3];
+console.log(sum(...numbers));
+```
+
+The concept of fragments is frequently used to split complicated application data requirements into smaller chunks, especially when you need to combine lots of UI components with different fragments into one initial data fetch.
+
+
+`Variables` Variables are used to parametrize queries and mutations. They allow developers to parameterize the queries and mutations to enable more dynamic content and reusable queries. Instead of adding hardcode values into the queries, variables provide a way to inject dynamic values at runtime.
+in most applications, the arguments to fields will be dynamic.
+
+// Declaring varibale
+
+Variables are declared within the parentheses of a query or mutation.
+All declared variables must be either scalars, enums, or input object types.
+Each varaible starts with a dollar sign `$` followed by the variablle name and its `type`.
+
+as here `$episode` is a varible parameterzied with its type `Episode`
+
+// querying
+
+```graphql
+query HeroNameAndFriends($episode: Episode) {
+  hero(episode: $episode) {
+    name
+    friends {
+      name
+    }
+  }
+}
+```
+
+// Defining variable
+
+Variable definitions can be optional or required. In the case above, since there isn't an `!` next to the `Episode` type, it's optional. But if the field you are passing the variable into requires a non-null argument, then the variable has to be required as well.
+
+// Default varible in case of non-null argument
+
+Default values can also be assigned to the variables in the query by adding the default value after the type declaration.
+
+// Querying
+
+```graphql
+query HeroNameAndFriends($episode: Episode = JEDI) {
+  hero(episode: $episode) {
+    name
+    friends {
+      name
+    }
+  }
+}
+```
+When default values are provided for all variables, you can call the query without passing any variables. If any variables are passed as part of the variables dictionary, they will override the defaults.
+
+`Inline Fragments` GraphQL schemas include the ability to define interfaces and union types.
+If you are querying a field that returns an interface or a union type, you will need to use inline fragments to access data on the underlying concrete type. It's easiest to see with an example:
+
+// Querying
+
+```graphql
+query HeroForEpisode($ep: Episode!) {
+  hero(episode: $ep) {
+    name
+    ... on Droid {
+      primaryFunction
+    }
+    ... on Human {
+      height
+    }
+  }
+}
+```
+
+In this query, the hero field returns the type `Character`, which might be either a `Human` or a `Droid` depending on the `episode` argument. In the direct selection, you can only ask for fields that exist on the `Character` interface, such as name.
+
+To ask for a field on the concrete type, you need to use an inline fragment with a type condition. Because the first fragment is labeled as `... on Droid`, the `primaryFunction` field will only be executed if the `Character` returned from `hero` is of the `Droid` type. Similarly for the `height` field for the `Human` type.
+
+
+`Meta fields` Given that there are some situations where you don't know what type you'll get back from the GraphQL service, you need some way to determine how to handle that data on the client. GraphQL allows you to request __typename, a meta field, at any point in a query to get the name of the object type at that point.
+
+// Querying
+
+```graphql
+{
+  search(text: "an") {
+    __typename
+    ... on Human {
+      name
+    }
+    ... on Droid {
+      name
+    }
+    ... on Starship {
+      name
+    }
+  }
+}
+```
+// Result
+
+```graphql
+{
+  "data": {
+    "search": [
+      {
+        "__typename": "Human",
+        "name": "Han Solo"
+      },
+      {
+        "__typename": "Human",
+        "name": "Leia Organa"
+      },
+      {
+        "__typename": "Starship",
+        "name": "TIE Advanced x1"
+      }
+    ]
+  }
+}
+```
+
+In the above query, search returns a union type that can be one of three options. It would be impossible to tell apart the different types from the client without the `__typename` field.
+
+`Directives` A directive can be attached to a field or fragment inclusion, and `can affect execution of the query` in any way the server desires. The core GraphQL specification includes exactly two directives, which must be supported by any spec-compliant GraphQL server implementation:
+
+Directives are preceded by the `@` character.
+
+`@include(if: Boolean)` Only include this field in the result if the argument is true.
+
+`@skip(if: Boolean)` Skip this field if the argument is true.
+
+// Querying
+
+```graphql
+query Hero($episode: Episode, $withFriends: Boolean!) {
+  hero(episode: $episode) {
+    name
+    friends @include(if: $withFriends) {
+      name
+    }
+  }
+}
+```
+
+`Mutations` A mutation can contain multiple fields. generally it is used to mutate some fields, just like a query. There's one important distinction between queries and mutations, other than the name.
+
+`While query fields are executed in parallel, mutation fields run in series, one after the other.`
+
+This means that if we send two `CreateReviewForEpisode` mutations in one request, the first is guaranteed to finish before the second begins, ensuring that we don't end up with a race condition with ourselves.
+
+// Mutating some data
+
+```graphql
+mutation CreateReviewForEpisode($ep: Episode!, $review: ReviewInput!) {
+  createReview(episode: $ep, review: $review) {
+    stars
+    commentary
+  }
+}
+```
+
+Note how `createReview` field returns the `stars` and `commentary` fields of the newly created `review`. This is especially useful when mutating existing data, for example, when incrementing a field, since we can mutate and query the new value of the field with one request.
+You might also notice that, in this example, the `review` variable we passed in is not a scalar. It's an input object type, a special kind of object type that can be passed in as an argument.
+
 
 `fields` are varibles associated with a Object. it must be decalared with its data type.
 
