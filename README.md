@@ -546,7 +546,6 @@ Now go to `schema.resolvers.go` delete some already implemented resolver functio
 # Operations ...
 
 
-
 # Disadvantages over REST
 
 Queries always return a HTTP status code of `200` , regardless of whether or not that query was successful.
