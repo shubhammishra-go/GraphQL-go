@@ -499,6 +499,14 @@ type Author {
 }
 ```
 
+## About Resolver
+
+A resolver is a `function` that's responsible for populating the data for a single field in your schema.
+It can populate that data in any way you define, such as by fetching data from a back-end database or a third-party API.
+
+for example:: `resolver.go`   and   `schema.resolvers.go`
+
+
 # To Use
 
 To use go programs that have multiple files & folders you have must have to intialized a new module in your current directory as a root like this `go mod init github.com/shubhammishra-1`
@@ -536,6 +544,8 @@ Now just go into your `schema.graphqls` define your graphql schema. as by defaul
 
 # After any changes made on schema.graphqls file
 
+As Graphql is a `Schema-Driven Development` In GraphQL your API starts with a schema that defines all your `types`, `queries` and `mutations`, It helps others to understand your API. So it’s like a contract between server and the client. Whenever you need to add a new capability to a GraphQL API you must redefine schema file and then implement that part in your code.
+
 After defining your own graphql schema/ or any changes made on graphql file go to `graph` directory using `cd graph` command.
 
 Execute `go get github.com/99designs/gqlgen@v0.17.43` than `go run github.com/99designs/gqlgen generate`
@@ -543,8 +553,50 @@ Execute `go get github.com/99designs/gqlgen@v0.17.43` than `go run github.com/99
 Now go to `schema.resolvers.go` delete some already implemented resolver functions of default `todo` schema. Done!
 
 
-# Operations ...
+# After Generating Schema
 
+After gqlgen generated code for us, we’ll have to implement our schema, we do that in ‍‍‍‍`schema.resolvers.go`, as you see there is functions for Queries and Mutations we defined in our schema.
+Go and implements these functions for your use cases...
+
+
+# Queries Operations
+
+a query in graphql is `asking for data`, you use a query and specify what you want and graphql will return it back to you.
+
+for example here `Links` is query resolver that nothing requires it just returns slice of all `links` from database `links.GetAll()`
+
+```go
+// Links is the resolver for the links field.
+func (r *queryResolver) Links(ctx context.Context) ([]*model.Link, error) {
+
+	var resultLinks []*model.Link
+	var dbLinks []links.Link
+	dbLinks = links.GetAll()
+	for _, link := range dbLinks{
+		resultLinks = append(resultLinks, &model.Link{ID:link.ID, Title:link.Title, Address:link.Address})
+	}
+	return resultLinks, nil
+}
+```
+
+# Mutations Operations
+
+Simply mutations are just like queries but they can cause a `data write`, Technically Queries can be used to write data too however it’s not suggested to use it. So mutations are like queries, they have names, parameters and they can return data.
+
+for example here `CreateLink` is a mutation resolver. that requires `input` of `link` and create link on database `link.Save()` returns that link itself
+
+```go
+// CreateLink is the resolver for the createLink field.
+func (r *mutationResolver) CreateLink(ctx context.Context, input model.NewLink) (*model.Link, error) {
+
+	var link main.Link  
+	link.Title = input.Title
+	link.Address = input.Address
+	linkID := link.Save()
+	return &model.Link{ID: strconv.FormatInt(linkID, 10), Title:link.Title, Address:link.Address}, nil
+
+}
+```
 
 # Disadvantages over REST
 
